@@ -36,6 +36,14 @@ describe("LDPR Voting with SBT", function () {
     await expect(voting.connect(alice).createVote("Вы за свободу?", ["Да", "Нет"], 3600)).to.be.revertedWith("Not owner");
   });
 
+  it("should return vote data", async () => {
+    await voting.connect(owner).createVote("Вы за свободу?", ["Да", "Нет"], 3600);
+    const vote = await voting.getVote(1);
+    expect(vote.question).to.equal("Вы за свободу?");
+    expect(vote.options).to.deep.equal(["Да", "Нет"]);
+    expect(vote.endTime - vote.startTime).to.equal(3600);
+  });
+
   it("should allow verified user to vote", async () => {
     await voting.connect(owner).createVote("Вы за мир?", ["Да", "Нет"], 3600);
     await voting.connect(alice).vote(1, 0); // голос "Да"

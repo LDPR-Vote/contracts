@@ -19,6 +19,13 @@ contract LDPRVoting {
         bool exists;
     }
 
+    struct VoteData {
+        string question;
+        string[] options;
+        uint startTime;
+        uint endTime;
+    }
+
     uint public sessionCount;
     mapping(uint => VoteSession) private sessions;
 
@@ -37,7 +44,11 @@ contract LDPRVoting {
         sbt = ISBT(_sbt);
     }
 
-    function createVote(string memory _question, string[] memory _options, uint durationSec) external onlyOwner {
+    function createVote(
+        string memory _question,
+        string[] memory _options,
+        uint durationSec
+    ) external onlyOwner {
         require(_options.length >= 2, "Need at least 2 options");
         sessionCount++;
         VoteSession storage s = sessions[sessionCount];
@@ -51,12 +62,27 @@ contract LDPRVoting {
     function vote(uint sessionId, uint optionId) external onlyVerified {
         VoteSession storage s = sessions[sessionId];
         require(s.exists, "No such session");
-        require(block.timestamp >= s.startTime && block.timestamp <= s.endTime, "Voting not active");
+        require(
+            block.timestamp >= s.startTime && block.timestamp <= s.endTime,
+            "Voting not active"
+        );
         require(optionId < s.options.length, "Invalid option");
         require(!s.hasVoted[msg.sender], "Already voted");
 
         s.hasVoted[msg.sender] = true;
         s.results[optionId]++;
+    }
+
+    function getVote(uint sessionId) external view returns (VoteData memory) {
+        VoteSession storage s = sessions[sessionId];
+        require(s.exists, "No such session");
+        return
+            VoteData({
+                question: s.question,
+                options: s.options,
+                startTime: s.startTime,
+                endTime: s.endTime
+            });
     }
 
     function getResults(uint sessionId) external view returns (uint[] memory) {
