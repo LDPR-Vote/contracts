@@ -39,7 +39,7 @@ contract LDPRVoting {
         _;
     }
 
-    constructor(address _sbt) {
+    constructor(address _sbt) payable {
         owner = msg.sender;
         sbt = ISBT(_sbt);
     }
@@ -48,10 +48,9 @@ contract LDPRVoting {
         string memory _question,
         string[] memory _options,
         uint durationSec
-    ) external onlyOwner {
-        require(_options.length >= 2, "Need at least 2 options");
-        sessionCount++;
-        VoteSession storage s = sessions[sessionCount];
+    ) external payable onlyOwner {
+        require(_options.length > 1, "Need at least 2 options");
+        VoteSession storage s = sessions[++sessionCount];
         s.question = _question;
         s.options = _options;
         s.startTime = block.timestamp;
@@ -62,10 +61,8 @@ contract LDPRVoting {
     function vote(uint sessionId, uint optionId) external onlyVerified {
         VoteSession storage s = sessions[sessionId];
         require(s.exists, "No such session");
-        require(
-            block.timestamp >= s.startTime && block.timestamp <= s.endTime,
-            "Voting not active"
-        );
+        require(!(block.timestamp < s.startTime), "Voting not active");
+        require(!(block.timestamp > s.endTime), "Voting not active");
         require(optionId < s.options.length, "Invalid option");
         require(!s.hasVoted[msg.sender], "Already voted");
 
@@ -73,27 +70,31 @@ contract LDPRVoting {
         s.results[optionId]++;
     }
 
-    function getVote(uint sessionId) external view returns (VoteData memory) {
+    function getVote(
+        uint sessionId
+    ) external view returns (VoteData memory data) {
         VoteSession storage s = sessions[sessionId];
         require(s.exists, "No such session");
-        return
-            VoteData({
-                question: s.question,
-                options: s.options,
-                startTime: s.startTime,
-                endTime: s.endTime
-            });
+
+        data = VoteData(s.question, s.options, s.startTime, s.endTime);
     }
 
-    function getResults(uint sessionId) external view returns (uint[] memory) {
+    function getResults(
+        uint sessionId
+    ) external view returns (uint[] memory resultCounts) {
         VoteSession storage s = sessions[sessionId];
         require(block.timestamp > s.endTime, "Voting not ended");
 
-        uint[] memory resultCounts = new uint[](s.options.length);
-        for (uint i = 0; i < s.options.length; i++) {
-            resultCounts[i] = s.results[i];
-        }
+        resultCounts = new uint[](s.options.length);
 
-        return resultCounts;
+        uint length = s.options.length;
+
+        for (uint i = 0; i < length; ) {
+            resultCounts[i] = s.results[i];
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 }

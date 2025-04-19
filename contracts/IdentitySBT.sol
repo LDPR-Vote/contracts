@@ -8,7 +8,7 @@ contract IdentitySBT is ERC721 {
     address public owner;
     mapping(address => bool) public isVerified;
 
-    constructor() ERC721("LDPR Verified Citizen", "LDPRVC") {
+    constructor() payable ERC721("LDPR Verified Citizen", "LDPRVC") {
         owner = msg.sender;
     }
 
@@ -17,7 +17,7 @@ contract IdentitySBT is ERC721 {
         _;
     }
 
-    function issue(address to) external onlyOwner {
+    function issue(address to) external payable onlyOwner {
         require(!isVerified[to], "Already verified");
         _mint(to, nextTokenId++);
         isVerified[to] = true;
